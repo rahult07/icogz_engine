@@ -11,13 +11,15 @@ def fetch_data_into_pg(postgres_query):
     cursor = None
     records = None
     try:
-        connection = psycopg2.connect(user="postgres", password="hitesh@123", host="127.0.0.1", port="5432",
+        connection = psycopg2.connect(user="postgres", password="rahul@123", host="127.0.0.1", port="5432",
                                       database="app_data")
         cursor = connection.cursor()
         cursor.execute(postgres_query)
         row_headers=[x[0] for x in cursor.description]
         records = cursor.fetchall()
         connection.commit()
+        print(postgres_query,'\n')
+        print(records)
         return records,row_headers
 
 
