@@ -62,7 +62,7 @@ class appflyerViewList(APIView):
         self.source_type = request.POST.get('source_type',None)
         self.medium_type_data = request.POST.get('medium_type_data',None)
         self.campaign_type = request.POST.get('campaign_type',None)
-        self.Media_Source = request.POST.get('campaign_type',None)
+        self.Media_Source = request.POST.get('Media_Source',None)
         self.b,self.rep_data = self.get_unique_data()
         data = self.fetching_data_quary()
         """ response """
@@ -77,7 +77,7 @@ class appflyerViewList(APIView):
         self.to_date,
         self.filter_data['all'] if self.source_type is None else self.filter_data[self.source_type],
         self.medium_source['all'] if self.medium_type_data is None else self.medium_source[self.medium_type_data],
-        self.medium_source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source),
+        self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source),
         tuple(self.b) if self.campaign_type is None else self.rep_data))
         self.data = data
         print(header_names)
