@@ -252,6 +252,7 @@ class clevertapViewList(APIView):
             queryset,header_names =fetch_data_into_pg(postgres_query='select date,payment_method,event_count,people_count,success_count from subscription_method where date between {0} and {1}'.format(self.from_date,self.to_date))
         else:
             queryset,header_names =fetch_data_into_pg(postgres_query="select date,payment_method,event_count,people_count,success_count from subscription_method where date between '2021-07-01' and '2021-07-06' ")
+
             #print(queryset)
 
         date =[]
@@ -268,6 +269,8 @@ class clevertapViewList(APIView):
 
         queryset ={'date':date,'payment_method':payment_method,'event_count':event_count,
                     'people_count':people_count,'success_count':success_count}
+        
+        
         
         return queryset
     

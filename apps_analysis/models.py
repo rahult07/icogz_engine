@@ -96,6 +96,9 @@ class SubscriptionMethod(models.Model):
     people_count = models.IntegerField(default=0)
     success_count = models.IntegerField(default=0)
 
+    def __str__(self) -> str:
+        return self.payment_method
+        
     class Meta:
         db_table = 'subscription_method'
 
