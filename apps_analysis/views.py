@@ -194,14 +194,18 @@ class appflyerViewList(APIView):
                                                                         from adword_data where source= 'Google' and date between '2021-07-01' and '2021-07-06'
                                                                         group by Campaign_Name,date,source order by date ''')
         #table={'None'}
+        campaign =[]
         date =[]
         impress =[]
         click =[]
+        install =[]
         for data in table:
+            campaign.append(data[0])
             date.append(data[1])
-            impress.append(data[3])
-            click.append(data[4])
-        table ={'all_data':table,'date':date,'impress':impress,'click':click}
+            impress.append(data[2])
+            click.append(data[3])
+            install.append(data[4])
+        table ={'campaign':campaign,'date':date,'impress':impress,'click':click,'install':install}
         return table
 
 class clevertapViewList(APIView):
@@ -235,3 +239,7 @@ class clevertapViewList(APIView):
             queryset ={'none'}
         queryset ={'None'}
         return queryset
+    
+
+
+    
