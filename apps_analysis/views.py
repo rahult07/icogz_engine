@@ -1,10 +1,14 @@
 import json
+from django.utils.translation import to_locale
 from rest_framework.views import APIView
 from rest_framework import status
 from icogz_project.constants import send_response
+from rest_framework.decorators import action
 import copy
 import psycopg2
-
+from .models import *
+from django.db.models import Sum, query
+from datetime import date, timedelta
 
 def fetch_data_into_pg(postgres_query):
     connection = None
@@ -59,7 +63,7 @@ class appflyerViewList(APIView):
                 "paid":paid_data,
                 "all":all_data
         }
-    def post(self, request):
+    def get(self, request):
         self.from_date = request.POST.get('from_date',None)
         self.to_date = request.POST.get('to_date',None)
         #print(from_date,to_date)
@@ -70,35 +74,36 @@ class appflyerViewList(APIView):
         self.b,self.rep_data = self.get_unique_data()
         data = self.fetching_data_quary()
         data_set = self.install_count()
+        data_query_set = self.get_date_data()
+        query = self.get_ios_data()
+        table = self.get_table()
+        
         """ response """
         if data:
-            return send_response(status.HTTP_200_OK,{"data": data,'data_set':data_set}, True, "fetch data successfully")
+            return send_response(status.HTTP_200_OK,{"data": data,'data_set':data_set,'data_query_set':data_query_set,'query':query,'table':table}, True, "fetch data successfully")
         else:
             return send_response(status.HTTP_200_OK,{"data": []}, True, "empty_data")
 
 
-    def fetching_data_quary(self):
-        if self.from_date and self.to_date:
-            data,header_names= fetch_data_into_pg(postgres_query="select count(impressions),count(clicks),count(conversions),count(spends) from adword_data where date between {0} and {1}".format(self.from_date,self.to_date))
-        else: 
-            data,header_names= fetch_data_into_pg(postgres_query="select count(impressions),count(clicks),count(conversions),count(spends) from adword_data")
+    def fetching_data_quary(self):   
+        data,header_names= fetch_data_into_pg(postgres_query="select sum(impressions),sum(clicks),sum(spends) from adword_data")
         for row in data:
             impressions_count = row[0]
             clicks_count = row[1]
-            conversions_count = row[2]
-            spends_count = row[3]
+            spends_count = row[2]
         data ={'impressions_count':impressions_count,'clicks_count':clicks_count,
-                'conversions_count':conversions_count,'spends_count':spends_count}
+                'spends_count':spends_count}
         return data
     
     def install_count(self):
-        if self.from_date and self.to_date:
-            data_set,header_names = fetch_data_into_pg(postgres_query='select count(installs) from app_data where date between {0} and {1}'.format(self.from_date,self.to_date))
-        else:
-            data_set,header_names = fetch_data_into_pg(postgres_query='select count(installs) from app_data')
+        data_set,header_names = fetch_data_into_pg(postgres_query='select sum(install) from app_data')
+        query = ios_data.objects.all().aggregate(install__sum=Sum('install'))['install__sum']
         for row in data_set:
             install_count = row[0]
-        data_set ={'install_count':install_count}
+        
+        andriod_ios_count = query + install_count
+        #print(install_count,'',query,'','total :-',andriod_ios_count)
+        data_set ={'install_count':andriod_ios_count}
         return data_set
 
 
@@ -115,7 +120,118 @@ class appflyerViewList(APIView):
         b = [i for sub in tuple(query) for i in sub]
         rep_data = remove_end_comma_on_tuple(self.campaign_type)
         return b,rep_data
+
+    def get_date_data(self):
+        if self.from_date and self.to_date:
+            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends) from adword_data where date between {0} and {1} group by date order by date".format(self.from_date,self.to_date))
+        else:
+            current_date = date.today()
+            dt = date.today() - timedelta(7)
+            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends) from adword_data where date between '2021-07-25' and '2021-07-31' group by date order by date")
+        total_impress =[]
+        total_clicks =[]
+        total_spends =[]
+        data_all =[]
+        for data in data_query_set:
+            data_all.append(data)
+            total_impress.append(data[1])
+            total_clicks.append(data[2])
+            total_spends.append(data[3])
+        impress = sum(total_impress)
+        click = sum(total_clicks)
+        spends = sum(total_spends)
+        data_query_set = {'impress_count':impress,'click_count':click,'spends_count':spends,'data_all':data_all}
+        #print(data_all)
+        return data_query_set
+    
+    def get_install_data(self):
+        if self.from_date and self.to_date:
+            queryset,header_names = fetch_data_into_pg(postgres_query='select date, sum(install) from app_data where date between {0} and {1} group by date order by date'.format(self.from_date,self.to_date))
+        else:
+            current_date = date.today()
+            dt = date.today() - timedelta(7)
+            queryset,header_names = fetch_data_into_pg(postgres_query="select date, sum(install) from app_data where date between '2021-07-25' and '2021-07-31' group by date order by date")          
+            #queryset ='none'
+        total_andriod =[]
+        android =[]
+        for data in queryset:
+            android.append(data[1])
+            total_andriod.append(data)
+
+        sum_android = sum(android)
+        queryset={"total_android":total_andriod,'sum_android':sum_android}
+
+        return queryset 
+
+    def get_ios_data(self):
+        queryset1  = self.get_install_data()
+        if self.from_date and self.to_date:
+            queryset,header_names = fetch_data_into_pg(postgres_query="select date,sum(install) from public.ios_data where date between {0} and {1} group by date order by date".format(self.from_date,self.to_date))
+        else:
+            current_date = date.today()
+            dt = date.today() - timedelta(7)
+            queryset,header_names =fetch_data_into_pg(postgres_query="select date, sum(install) from public.ios_data where date between '2021-07-25' and '2021-07-31' group by date order by date")          
         
+        data_install =[]
+        data_install_all =[]
+        for data in queryset:
+            data_install.append(data[1])
+            data_install_all.append(data)
+        sum_install =sum(data_install)
+        total = sum_install + queryset1['sum_android'] 
+        #print(sum_install,'',queryset1['sum_android'],'',total)
+        queryset ={'total':total}
+        return queryset
+    
+    def get_table(self):
+        if self.from_date and self.to_date and self.Media_Source:
+            table,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install from adword_data 
+                                                                    where date between {0} and {1} and source in {2} group by Campaign_Name,date,source order by date '''.format(self.from_date,self.to_date,
+                                                                     self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source)))
+            #print('im in table:-',table)
+        else:
+            table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install 
+                                                                        from adword_data where source= 'Google' and date between '2021-07-01' and '2021-07-06'
+                                                                        group by Campaign_Name,date,source order by date ''')
+        #table={'None'}
+        date =[]
+        impress =[]
+        click =[]
+        for data in table:
+            date.append(data[1])
+            impress.append(data[3])
+            click.append(data[4])
+        table ={'all_data':table,'date':date,'impress':impress,'click':click}
+        return table
 
 class clevertapViewList(APIView):
-    pass
+    def get(self,request):
+        self.from_date = request.POST.get('from_date',None)
+        self.to_date = request.POST.get('to_date',None)
+        data = self.fetch_Plan()
+        dataset =self.fetch_method()
+        
+        """ response """
+        if data:
+            return send_response(status.HTTP_200_OK,{"data": data,"dataset":dataset}, True, "fetch data successfully")
+        else:
+            return send_response(status.HTTP_200_OK,{"data": []}, True, "empty_data")
+    
+    def fetch_Plan(self):
+        if self.from_date and self.to_date:
+            query,header_names =fetch_data_into_pg(postgres_query='Select * from subscription_plan where date between {0} and {1}'.format(self.from_date,self.to_date))
+        else:
+            query,header_names =fetch_data_into_pg(postgres_query="Select * from subscription_plan")
+            print(query)
+            #query ={'none'}
+        query ={'None'}
+        return query
+
+    def fetch_method(self):
+        if self.from_date and self.to_date:
+            queryset,header_names =fetch_data_into_pg(postgres_query='Select * from subscription_method where date between {0} and {1}'.format(self.from_date,self.to_date))
+        else:
+            #queryset,header_names =fetch_data_into_pg(postgres_query="Select * from subscription_method where date between '2021-07-17' and '2021-07-25 ")
+            queryset ={'none'}
+        queryset ={'None'}
+        return queryset
