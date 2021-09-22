@@ -223,21 +223,52 @@ class clevertapViewList(APIView):
     
     def fetch_Plan(self):
         if self.from_date and self.to_date:
-            query,header_names =fetch_data_into_pg(postgres_query='Select * from subscription_plan where date between {0} and {1}'.format(self.from_date,self.to_date))
+            query,header_names =fetch_data_into_pg(postgres_query='select date,payment_plan,event_count,people_count,success_count,sale from subscription_plan where date between {0} and {1}'.format(self.from_date,self.to_date))
         else:
-            query,header_names =fetch_data_into_pg(postgres_query="Select * from subscription_plan")
+            query,header_names =fetch_data_into_pg(postgres_query="select date,payment_plan,event_count,people_count,success_count,sale from subscription_plan where date between '2021-07-01' and '2021-07-06' ")
             print(query)
             #query ={'none'}
-        query ={'None'}
+        
+        date =[]
+        payment_plan =[]
+        event_count =[]
+        people_count =[]
+        success_count =[]
+        sale =[]
+        for data in query:
+            date.append(data[0])
+            payment_plan.append(data[1])
+            event_count.append(data[2])
+            people_count.append(data[3])
+            success_count.append(data[4])
+            sale.append(data[5])
+
+        query ={'date':date,'payment_plan':payment_plan,'event_count':event_count,
+                'people_count':people_count,'success_count':success_count,'sale':sale}
         return query
 
     def fetch_method(self):
         if self.from_date and self.to_date:
-            queryset,header_names =fetch_data_into_pg(postgres_query='Select * from subscription_method where date between {0} and {1}'.format(self.from_date,self.to_date))
+            queryset,header_names =fetch_data_into_pg(postgres_query='select date,payment_method,event_count,people_count,success_count from subscription_method where date between {0} and {1}'.format(self.from_date,self.to_date))
         else:
-            #queryset,header_names =fetch_data_into_pg(postgres_query="Select * from subscription_method where date between '2021-07-17' and '2021-07-25 ")
-            queryset ={'none'}
-        queryset ={'None'}
+            queryset,header_names =fetch_data_into_pg(postgres_query="select date,payment_method,event_count,people_count,success_count from subscription_method where date between '2021-07-01' and '2021-07-06' ")
+            #print(queryset)
+
+        date =[]
+        payment_method =[]
+        event_count =[]
+        people_count =[]
+        success_count =[]
+        for data in queryset:
+            date.append(data[0])
+            payment_method.append(data[1])
+            event_count.append(data[2])
+            people_count.append(data[3])
+            success_count.append(data[4])
+
+        queryset ={'date':date,'payment_method':payment_method,'event_count':event_count,
+                    'people_count':people_count,'success_count':success_count}
+        
         return queryset
     
 
