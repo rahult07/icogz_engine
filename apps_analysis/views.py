@@ -123,24 +123,36 @@ class appflyerViewList(APIView):
 
     def get_date_data(self):
         if self.from_date and self.to_date:
-            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends) from adword_data where date between {0} and {1} group by date order by date".format(self.from_date,self.to_date))
+            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends),sum(conversions) from adword_data where date between {0} and {1} group by date order by date".format(self.from_date,self.to_date))
         else:
-            current_date = date.today()
-            dt = date.today() - timedelta(7)
-            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends) from adword_data where date between '2021-07-25' and '2021-07-31' group by date order by date")
+            #current_date = date.today()
+            #dt = date.today() - timedelta(7)
+            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends),sum(conversions) from adword_data where date between '2021-07-25' and '2021-07-31' group by date order by date")
         total_impress =[]
+        date_col = []
         total_clicks =[]
         total_spends =[]
+        total_install =[]
         data_all =[]
         for data in data_query_set:
             data_all.append(data)
+            date_col.append(data[0])
             total_impress.append(data[1])
             total_clicks.append(data[2])
             total_spends.append(data[3])
+            total_install.append(data[4])
+            c = ( data[4] *100 / data[2] ) if data[4] != 0 else 0
+            print('here   :',c)
         impress = sum(total_impress)
         click = sum(total_clicks)
         spends = sum(total_spends)
-        data_query_set = {'impress_count':impress,'click_count':click,'spends_count':spends,'data_all':data_all}
+        install = sum(total_install)
+        perce = (install*100)/click
+        print('hii percentage :-',perce)
+        
+        data_query_set = {'impress_count':impress,'click_count':click,
+                          'spends_count':spends,'date':date_col,'all_data':data_all,
+                          'impress_data':total_impress,'install_count':install}
         #print(data_all)
         return data_query_set
     
@@ -185,27 +197,53 @@ class appflyerViewList(APIView):
     
     def get_table(self):
         if self.from_date and self.to_date and self.Media_Source:
-            table,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install from adword_data 
+            table,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
                                                                     where date between {0} and {1} and source in {2} group by Campaign_Name,date,source order by date '''.format(self.from_date,self.to_date,
                                                                      self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source)))
-            #print('im in table:-',table)
+            #print('im in table:-',self.Media_Source)
+        elif self.Media_Source:
+            table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends
+                                                                        from adword_data where source in {0} and date between '2021-07-01' and '2021-07-06'
+                                                                        group by Campaign_Name,date,source order by date '''.format(self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source)))
         else:
-            table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install 
-                                                                        from adword_data where source= 'Google' and date between '2021-07-01' and '2021-07-06'
+            table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends
+                                                                        from adword_data where source ='Google' and date between '2021-07-01' and '2021-07-06'
                                                                         group by Campaign_Name,date,source order by date ''')
-        #table={'None'}
+            #print(table)
+
         campaign =[]
         date =[]
         impress =[]
         click =[]
         install =[]
+        data_all =[]
+
+        table_data = []
+
         for data in table:
-            campaign.append(data[0])
-            date.append(data[1])
-            impress.append(data[2])
-            click.append(data[3])
-            install.append(data[4])
-        table ={'campaign':campaign,'date':date,'impress':impress,'click':click,'install':install}
+            # data_all.append(data)
+            # campaign.append(data[0])
+            # date.append(data[1])
+            # impress.append(data[2])
+            # click.append(data[3])
+            # install.append(data[4])
+            conversion_rate = (data[4] *100) / data[3]  if data[4] != 0 else 0
+            #print(data[4],'install',data[3],'',conversion_rate)
+            info = {
+                'date': data[1],
+                'campaign': data[0],
+                'impression': data[2],
+                'click': data[3],
+                'install': data[4],
+                'spends':data[5],
+                'conversion_rate': conversion_rate
+            }
+
+            table_data.append(info)
+
+        #print(table_data)
+
+        table ={'table_data': table_data}
         return table
 
 class clevertapViewList(APIView):
