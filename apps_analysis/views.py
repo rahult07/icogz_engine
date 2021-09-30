@@ -64,13 +64,13 @@ class appflyerViewList(APIView):
                 "all":all_data
         }
     def get(self, request):
-        self.from_date = request.POST.get('from_date',None)
-        self.to_date = request.POST.get('to_date',None)
+        self.from_date = request.GET.get('from_date',None)
+        self.to_date = request.GET.get('to_date',None)
         #print(from_date,to_date)
         self.source_type = request.POST.get('source_type',None)
         self.medium_type_data = request.POST.get('medium_type_data',None)
         self.campaign_type = request.POST.get('campaign_type',None)
-        self.Media_Source = request.POST.get('Media_Source',None)
+        self.Media_Source = request.GET.get('Media_Source',None)
         self.b,self.rep_data = self.get_unique_data()
         data = self.fetching_data_quary()
         data_set = self.install_count()
@@ -210,6 +210,7 @@ class appflyerViewList(APIView):
                                                                         from adword_data where source ='Google' and date between '2021-07-01' and '2021-07-06'
                                                                         group by Campaign_Name,date,source order by date ''')
             #print(table)
+            
 
         campaign =[]
         date =[]
