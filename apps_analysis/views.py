@@ -147,7 +147,7 @@ class appflyerViewList(APIView):
         click = sum(total_clicks)
         spends = sum(total_spends)
         install = sum(total_install)
-        perce = (install*100)/click
+        perce = (install*100)/click  if install != 0 else 0
         print('hii percentage :-',perce)
         
         data_query_set = {'impress_count':impress,'click_count':click,
@@ -228,15 +228,16 @@ class appflyerViewList(APIView):
             # impress.append(data[2])
             # click.append(data[3])
             # install.append(data[4])
-            conversion_rate = (data[4] *100) / data[3]  if data[4] != 0 else 0
+            conversion_rate = round((data[4] *100) / data[3],2) if data[4] != 0 else 0
             #print(data[4],'install',data[3],'',conversion_rate)
+            #print( data[0],'click here ',round(data[3],2))
             info = {
                 'date': data[1],
                 'campaign': data[0],
                 'impression': data[2],
                 'click': data[3],
                 'install': data[4],
-                'spends':data[5],
+                'spends':round(data[5],2),
                 'conversion_rate': conversion_rate
             }
 
@@ -268,22 +269,37 @@ class clevertapViewList(APIView):
             print(query)
             #query ={'none'}
         
-        date =[]
-        payment_plan =[]
-        event_count =[]
-        people_count =[]
-        success_count =[]
-        sale =[]
+        # date =[]
+        # payment_plan =[]
+        # event_count =[]
+        # people_count =[]
+        # success_count =[]
+        # sale =[]
+        table_data =[]
+        
         for data in query:
-            date.append(data[0])
-            payment_plan.append(data[1])
-            event_count.append(data[2])
-            people_count.append(data[3])
-            success_count.append(data[4])
-            sale.append(data[5])
+            success = (data[4] *100) / data[2]  if data[2] != 0 else 0
+            info_table ={
+                'date':data[0],
+                'payment_plan':data[1],
+                'event_count':data[2],
+                'people_count':data[3],
+                'success_count':data[4],
+                'sale':data[5],
+                'success %':success
+            }
+            table_data.append(info_table)
+            # date.append(data[0])
+            # payment_plan.append(data[1])
+            # event_count.append(data[2])
+            # people_count.append(data[3])
+            # success_count.append(data[4])
+            # sale.append(data[5])
 
-        query ={'date':date,'payment_plan':payment_plan,'event_count':event_count,
-                'people_count':people_count,'success_count':success_count,'sale':sale}
+        # query ={'table_data':table_data,'date':date,'payment_plan':payment_plan,'event_count':event_count,
+        #         'people_count':people_count,'success_count':success_count,'sale':sale}
+
+        query ={'table_data':table_data}
         return query
 
     def fetch_method(self):
@@ -294,20 +310,34 @@ class clevertapViewList(APIView):
 
             #print(queryset)
 
-        date =[]
-        payment_method =[]
-        event_count =[]
-        people_count =[]
-        success_count =[]
-        for data in queryset:
-            date.append(data[0])
-            payment_method.append(data[1])
-            event_count.append(data[2])
-            people_count.append(data[3])
-            success_count.append(data[4])
+        # date =[]
+        # payment_method =[]
+        # event_count =[]
+        # people_count =[]
+        # success_count =[]
+        data_table =[]
 
-        queryset ={'date':date,'payment_method':payment_method,'event_count':event_count,
-                    'people_count':people_count,'success_count':success_count}
+        for data in queryset:
+            success  = (data[4] *100) / data[2]  if data[2] != 0 else 0
+            data_info ={
+                'date':data[0],
+                'payment_method':data[1],
+                'event_count':data[2],
+                'people_count':data[3],
+                'success_count':data[4],
+                'success %':success
+            }
+            # date.append(data[0])
+            # payment_method.append(data[1])
+            # event_count.append(data[2])
+            # people_count.append(data[3])
+            # success_count.append(data[4])
+            data_table.append(data_info)
+
+        # queryset ={'date':date,'payment_method':payment_method,'event_count':event_count,
+        #             'people_count':people_count,'success_count':success_count}
+
+        queryset ={'data_table':data_table}
         
         
         
