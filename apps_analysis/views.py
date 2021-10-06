@@ -9,6 +9,7 @@ import psycopg2
 from .models import *
 from django.db.models import Sum, query
 from datetime import date, timedelta
+import datetime
 
 def fetch_data_into_pg(postgres_query):
     connection = None
@@ -77,10 +78,11 @@ class appflyerViewList(APIView):
         data_query_set = self.get_date_data()
         query = self.get_ios_data()
         table = self.get_table()
+        line = self.line_chart()
         
         """ response """
         if data:
-            return send_response(status.HTTP_200_OK,{"data": data,'data_set':data_set,'data_query_set':data_query_set,'query':query,'table':table}, True, "fetch data successfully")
+            return send_response(status.HTTP_200_OK,{"data": data,'data_set':data_set,'data_query_set':data_query_set,'query':query,'table':table,'line':line}, True, "fetch data successfully")
         else:
             return send_response(status.HTTP_200_OK,{"data": []}, True, "empty_data")
 
@@ -134,25 +136,26 @@ class appflyerViewList(APIView):
         total_spends =[]
         total_install =[]
         data_all =[]
+        pervious_date =[]
         for data in data_query_set:
+            
             data_all.append(data)
             date_col.append(data[0])
             total_impress.append(data[1])
             total_clicks.append(data[2])
             total_spends.append(data[3])
             total_install.append(data[4])
-            c = ( data[4] *100 / data[2] ) if data[4] != 0 else 0
-            print('here   :',c)
+        
         impress = sum(total_impress)
         click = sum(total_clicks)
         spends = sum(total_spends)
         install = sum(total_install)
-        perce = (install*100)/click  if install != 0 else 0
-        print('hii percentage :-',perce)
+        conversion_rate = round((install*100)/click,2)  if install != 0 else 0
+        #print('hii percentage :-',conversion_rate)
         
         data_query_set = {'impress_count':impress,'click_count':click,
                           'spends_count':spends,'date':date_col,'all_data':data_all,
-                          'impress_data':total_impress,'install_count':install}
+                          'impress_data':total_impress,'install_count':install,'conversion_rate':conversion_rate}
         #print(data_all)
         return data_query_set
     
@@ -199,35 +202,20 @@ class appflyerViewList(APIView):
         if self.from_date and self.to_date and self.Media_Source:
             table,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
                                                                     where date between {0} and {1} and source in {2} group by Campaign_Name,date,source order by date '''.format(self.from_date,self.to_date,
-                                                                     self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source)))
+                                                                     self.Media_Source['all'] if self.Media_Source is None else self.Media_Source))
             #print('im in table:-',self.Media_Source)
         elif self.Media_Source:
             table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends
                                                                         from adword_data where source in {0} and date between '2021-07-01' and '2021-07-06'
-                                                                        group by Campaign_Name,date,source order by date '''.format(self.Media_Source['all'] if self.Media_Source is None else remove_end_comma_on_tuple(self.Media_Source)))
+                                                                        group by Campaign_Name,date,source order by date '''.format(self.Media_Source['all'] if self.Media_Source is None else self.Media_Source))
         else:
             table,header_names = fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends
                                                                         from adword_data where source ='Google' and date between '2021-07-01' and '2021-07-06'
                                                                         group by Campaign_Name,date,source order by date ''')
             #print(table)
-            
-
-        campaign =[]
-        date =[]
-        impress =[]
-        click =[]
-        install =[]
-        data_all =[]
-
         table_data = []
 
         for data in table:
-            # data_all.append(data)
-            # campaign.append(data[0])
-            # date.append(data[1])
-            # impress.append(data[2])
-            # click.append(data[3])
-            # install.append(data[4])
             conversion_rate = round((data[4] *100) / data[3],2) if data[4] != 0 else 0
             #print(data[4],'install',data[3],'',conversion_rate)
             #print( data[0],'click here ',round(data[3],2))
@@ -244,9 +232,66 @@ class appflyerViewList(APIView):
             table_data.append(info)
 
         #print(table_data)
-
         table ={'table_data': table_data}
+        #print('table :==============>>',table)
         return table
+
+    def campagin_chart(self):
+        campagin ={}
+        return campagin
+    
+    def line_chart(self):
+        if self.from_date and self.to_date:
+            date = self.from_date.replace('" ',"")
+            date_to = self.to_date.replace('" ',"")
+            new_to_date = date_to.replace("'","")
+            new_date = date.replace("'","")
+            date_time_obj = datetime.datetime.strptime(new_date, "%Y-%m-%d") - timedelta(30)
+            date_time_obj1 = datetime.datetime.strptime(new_to_date, "%Y-%m-%d") - timedelta(30)
+            date_from = date_time_obj.date()
+            date_to = date_time_obj1.date()
+            #print(new_date,'=====================>',date_from)
+
+            line_data,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
+                                                                    where date between {0} and {1}  group by Campaign_Name,date,source order by date '''.format(self.from_date,self.to_date))
+                        
+            line_data1,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
+                                                                    where date between '{0}' and '{1}'  group by Campaign_Name,date,source order by date '''.format(date_from,date_to))
+            
+        else:
+            line_data,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
+                                                                    where date between '2021-08-01' and '2021-08-06'  group by Campaign_Name,date,source order by date '''.format(self.from_date,self.to_date))
+
+            line_data1,header_names =fetch_data_into_pg(postgres_query='''select Campaign_Name,date,sum(impressions) impressions,sum(clicks) click , sum(conversions) install,sum(spends) spends from adword_data 
+                                                                    where date between '2021-07-01' and '2021-07-06'  group by Campaign_Name,date,source order by date ''')
+        data_line =[]
+        data_line1=[]
+        for line in line_data:
+            conversion_rate = round((line[4] *100) / line[3],2) if line[4] != 0 else 0
+            line_info ={
+                'date':line[1],
+                'impressions':line[2],
+                'clicks':line[3],
+                'install':line[4],
+                'conversion_rate':conversion_rate
+
+
+            }
+            data_line.append(line_info)
+        for line1 in line_data1:
+            conversion_rate = round((line1[4] *100) / line1[3],2) if line1[4] != 0 else 0
+            line_info1 ={
+                'pervious':line1[1],
+                'impressions':line1[2],
+                'clicks':line1[3],
+                'install':line1[4],
+                'conversion_rate':conversion_rate
+            }
+            data_line1.append(line_info1)
+        line_graph ={'data_line':data_line,'data_line1':data_line1}
+        print('==============>',data_line)
+        print('########################',data_line1)
+        return line_graph
 
 class clevertapViewList(APIView):
     def get(self,request):
