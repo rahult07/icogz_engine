@@ -129,7 +129,7 @@ class appflyerViewList(APIView):
         else:
             #current_date = date.today()
             #dt = date.today() - timedelta(7)
-            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends),sum(conversions) from adword_data where date between '2021-07-25' and '2021-07-31' group by date order by date")
+            data_query_set,header_names= fetch_data_into_pg(postgres_query="select date,sum(impressions),sum(clicks),sum(spends),sum(conversions) from adword_data where date between '2021-07-01' and '2021-07-06' group by date order by date")
         total_impress =[]
         date_col = []
         total_clicks =[]
