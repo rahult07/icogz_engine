@@ -38,8 +38,16 @@ class SubscriptionMethodAdmin(ImportExportModelAdmin,admin.ModelAdmin):
     list_per_page = 100
     list_filter =('payment_method',)
 
+class User_AnalysisAdmin(ImportExportModelAdmin,admin.ModelAdmin):
+	list_display =('profile_id',)
+	ordering =('-profile_id',)
+	search_fields =('profile_id',)
+	list_per_page =100
+	list_filter =('profile_id',)
+	
 admin.site.register(app_data,App_DataAdmin)
 admin.site.register(ios_data,IOS_DataAdmin)
 admin.site.register(adword_data,Adword_DataAdmin)
 admin.site.register(SubscriptionPlan,SubscriptionPlanAdmin)
 admin.site.register(SubscriptionMethod,SubscriptionMethodAdmin)
+admin.site.register(User_Analysis)

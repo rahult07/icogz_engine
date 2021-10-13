@@ -88,13 +88,26 @@ class appflyerViewList(APIView):
 
 
     def fetching_data_quary(self):   
-        data,header_names= fetch_data_into_pg(postgres_query="select sum(impressions),sum(clicks),sum(spends) from adword_data")
+        data,header_names= fetch_data_into_pg(postgres_query='''select sum(impressions),sum(clicks),sum(spends),sum(conversions),extract(year from TO_DATE(date,'YYYY-MM-DD')) date from adword_data group by extract(year from TO_DATE(date,'YYYY-MM-DD')) order by extract(year from TO_DATE(date,'YYYY-MM-DD')) ''')
+        datac =[]
         for row in data:
-            impressions_count = row[0]
-            clicks_count = row[1]
-            spends_count = row[2]
-        data ={'impressions_count':impressions_count,'clicks_count':clicks_count,
-                'spends_count':spends_count}
+            achived_spends = round((row[2]*1.2)/100,2)
+            achived_install = round((row[3]*1.2)/100,2)
+            achived_percentage_install = round(row[3]/achived_install,2)
+            achived_percentage_spend = round(row[2]/achived_spends,2)
+            info ={
+                'impressions_count':row[0],
+                'clicks_count' :row[1],
+                'spends_count' : row[2],
+                'install_count' : row[3],
+                'year' :int(row[4]),
+                'achived_spends':achived_percentage_spend,
+                'achived_install':achived_percentage_install
+
+            }
+            datac.append(info)
+            
+        data ={'data_quary':datac}
         return data
     
     def install_count(self):
@@ -289,8 +302,8 @@ class appflyerViewList(APIView):
             }
             data_line1.append(line_info1)
         line_graph ={'data_line':data_line,'data_line1':data_line1}
-        print('==============>',data_line)
-        print('########################',data_line1)
+        #print('==============>',data_line)
+        #print('########################',data_line1)
         return line_graph
 
 class clevertapViewList(APIView):

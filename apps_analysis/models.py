@@ -1,3 +1,4 @@
+from django import db
 from django.db import models
 
 # Create your models here.
@@ -104,3 +105,61 @@ class SubscriptionMethod(models.Model):
 
 
 
+class User_Analysis(models.Model):
+    profile_id = models.IntegerField(default=0)
+    app_launched_count = models.IntegerField(default=0)
+    uninstall_count = models.IntegerField(default=0)
+    app_launched_start_date = models.CharField(max_length=500,default='')
+    app_launched_end_date = models.CharField(max_length=500,default='')
+    uninstall_start_date = models.CharField(max_length=500,default='')
+    uninstall_end_date = models.CharField(max_length=500,default='')
+    install_count = models.IntegerField(default=0)
+    install_start_date = models.CharField(max_length=500,default='')
+    install_end_date = models.CharField(max_length=500,default='')
+    video_load_count = models.IntegerField(default=0)
+    video_load_start_date = models.CharField(max_length=500,default='')
+    video_load_end_date = models.CharField(max_length=500,default='')
+    video_progress_count = models.IntegerField(default=0)
+    video_progress_start_date = models.CharField(max_length=500,default='')
+    player_video_progress_end_date = models.CharField(max_length=500,default='')
+    os_version = models.FloatField(default=0)
+    app_version = models.IntegerField(default=0)
+    model_name = models.CharField(max_length=500,default='')
+    model = models.CharField(max_length=500,default='')
+    platform = models.CharField(max_length=500,default='')
+    ts = models.CharField(max_length=500,default='')
+    ct_app_version = models.FloatField(default=0)
+    ct_source = models.CharField(max_length=500,default='')
+    menu_click = models.IntegerField(default=0)
+    menu_start_date = models.CharField(max_length=500,default='')
+    menu_end_date = models.CharField(max_length=500,default='')
+    contact_click = models.IntegerField(default=0)
+    contact_start_date = models.CharField(max_length=500,default='')
+    contact_end_date = models.CharField(max_length=500,default='')
+    success_sign_count = models.IntegerField(default=0)
+    success_start_date = models.CharField(max_length=500,default='')
+    success_end_date = models.CharField(max_length=500,default='')
+    faq_quest_count = models.IntegerField(default=0)
+    faq_quest_start_date = models.CharField(max_length=500,default='')
+    faq_quest_end_date = models.CharField(max_length=500,default='')
+    logout_count = models.IntegerField(default=0)
+    logout_start_date = models.CharField(max_length=500,default='')
+    logout_end_date = models.CharField(max_length=500,default='')
+    charged_count = models.IntegerField(default=0)
+    charged_start_date = models.CharField(max_length=500,default='')
+    charged_end_date = models.CharField(max_length=500,default='')
+    term_click_count = models.IntegerField(default=0)
+    term_click_start_date = models.CharField(max_length=500,default='')
+    term_click_end_date = models.CharField(max_length=500,default='')
+    version_changed_count = models.IntegerField(default=0)
+    version_changed_start_date = models.CharField(max_length=500,default='')
+    version_changed_end_date = models.CharField(max_length=500,default='')
+    pvideo_loaded_count = models.IntegerField(default=0)
+    pvideo_loaded_start_date = models.CharField(max_length=500,default='')
+    pvideo_loaded_end_date = models.CharField(max_length=500,default='')
+    
+
+    def __str__(self) -> str:
+        return self.profile_id
+    class Meta:
+        db_table = 'user_analysis'
