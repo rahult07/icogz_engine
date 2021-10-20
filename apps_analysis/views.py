@@ -302,20 +302,28 @@ class appflyerViewList(APIView):
             }
             data_line1.append(line_info1)
         line_graph ={'data_line':data_line,'data_line1':data_line1}
-        #print('==============>',data_line)
-        #print('########################',data_line1)
         return line_graph
 
 class clevertapViewList(APIView):
     def get(self,request):
-        self.from_date = request.POST.get('from_date',None)
-        self.to_date = request.POST.get('to_date',None)
+        self.from_date = request.GET.get('from_date',None)
+        self.to_date = request.GET.get('to_date',None)
+        self.platform = request.GET.get('platform',None)
         data = self.fetch_Plan()
         dataset =self.fetch_method()
+        queryset = self.data_uninstall()
+        set_query = self.data_install()
+        setquery = self.os_version_fetch()
+        app_version = self.app_version_fetch()
+        model_name = self.model_fetch()
+        device = self.ct_source_fetch()
         
         """ response """
         if data:
-            return send_response(status.HTTP_200_OK,{"data": data,"dataset":dataset}, True, "fetch data successfully")
+            return send_response(status.HTTP_200_OK,{"data": data,"dataset":dataset,
+                                                        'queryset':queryset,'set_query':set_query,
+                                                        'setquery':setquery,'app_version':app_version,
+                                                        'model_name':model_name,'device':device}, True, "fetch data successfully")
         else:
             return send_response(status.HTTP_200_OK,{"data": []}, True, "empty_data")
     
@@ -324,15 +332,9 @@ class clevertapViewList(APIView):
             query,header_names =fetch_data_into_pg(postgres_query='select date,payment_plan,event_count,people_count,success_count,sale from subscription_plan where date between {0} and {1}'.format(self.from_date,self.to_date))
         else:
             query,header_names =fetch_data_into_pg(postgres_query="select date,payment_plan,event_count,people_count,success_count,sale from subscription_plan where date between '2021-07-01' and '2021-07-06' ")
-            print(query)
+            #print(query)
             #query ={'none'}
         
-        # date =[]
-        # payment_plan =[]
-        # event_count =[]
-        # people_count =[]
-        # success_count =[]
-        # sale =[]
         table_data =[]
         
         for data in query:
@@ -347,16 +349,6 @@ class clevertapViewList(APIView):
                 'success %':success
             }
             table_data.append(info_table)
-            # date.append(data[0])
-            # payment_plan.append(data[1])
-            # event_count.append(data[2])
-            # people_count.append(data[3])
-            # success_count.append(data[4])
-            # sale.append(data[5])
-
-        # query ={'table_data':table_data,'date':date,'payment_plan':payment_plan,'event_count':event_count,
-        #         'people_count':people_count,'success_count':success_count,'sale':sale}
-
         query ={'table_data':table_data}
         return query
 
@@ -365,14 +357,7 @@ class clevertapViewList(APIView):
             queryset,header_names =fetch_data_into_pg(postgres_query='select date,payment_method,event_count,people_count,success_count from subscription_method where date between {0} and {1}'.format(self.from_date,self.to_date))
         else:
             queryset,header_names =fetch_data_into_pg(postgres_query="select date,payment_method,event_count,people_count,success_count from subscription_method where date between '2021-07-01' and '2021-07-06' ")
-
-            #print(queryset)
-
-        # date =[]
-        # payment_method =[]
-        # event_count =[]
-        # people_count =[]
-        # success_count =[]
+        
         data_table =[]
 
         for data in queryset:
@@ -385,22 +370,164 @@ class clevertapViewList(APIView):
                 'success_count':data[4],
                 'success %':success
             }
-            # date.append(data[0])
-            # payment_method.append(data[1])
-            # event_count.append(data[2])
-            # people_count.append(data[3])
-            # success_count.append(data[4])
             data_table.append(data_info)
-
-        # queryset ={'date':date,'payment_method':payment_method,'event_count':event_count,
-        #             'people_count':people_count,'success_count':success_count}
-
         queryset ={'data_table':data_table}
-        
-        
-        
         return queryset
+
+    def data_uninstall(self):
+        if self.from_date and self.to_date and self.platform:
+            dataset_qu,header =fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(uninstall_start_date))AS DATE)  AS Date,
+                                                                    count(uninstall_count) from user_analysis 
+                                                                        where timezone('Asia/Kolkata', CAST(to_timestamp(uninstall_start_date) AS date)) between {0} and {1} and platform in {2}
+                                                                            group by Date order by Date'''.format(self.from_date,self.to_date,
+                                                                            self.platform['all'] if self.platform is None else self.platform))
+            
+            #print(dataset_qu)
+        else:
+            dataset_qu,header =fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(uninstall_start_date))AS DATE)  AS Date, count(uninstall_count) 
+                                                                    from user_analysis 
+                                                                        where timezone('Asia/Kolkata', CAST(to_timestamp(uninstall_start_date)AS date)) between '2021-09-01' and '2021-09-03' and platform ='Android'
+                                                                            group by Date order by Date''')
+        data,total_uninstall=[],[]                                                                  
+        for rows in dataset_qu:
+            total_uninstall.append(rows[1])
+            data_col ={
+                'date':rows[0],
+                'uninstall_count':rows[1]
+            }
+            data.append(data_col)
+
+        dataset_query = {'data':data,'total_uninstall':sum(total_uninstall)}
+        #print('##############',dataset_query)
+        return dataset_query
     
+    def data_install(self):
+        if self.from_date and self.to_date and self.platform:
+            data_set,header =fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(install_start_date))AS DATE)  AS Date,
+                                                                    count(install_count) from user_analysis 
+                                                                        where CAST(timezone('Asia/Kolkata', to_timestamp(install_start_date))AS DATE) between {0} and {1} and platform in {2}
+                                                                            group by Date order by Date'''.format(self.from_date,self.to_date,
+                                                                            self.platform['all'] if self.platform is None else self.platform))
+            
+            #print(dataset_qu)
+        else:
+            data_set,header =fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(install_start_date))AS DATE)  AS Date, count(install_count) 
+                                                                    from user_analysis 
+                                                                        where CAST(timezone('Asia/Kolkata', to_timestamp(install_start_date))AS DATE) between '2021-08-31' and '2021-09-03' and platform ='Android'
+                                                                            group by Date order by Date''')
+        data_seter,total_install =[],[]                                                                   
+        for rows in data_set:
+            total_install.append(rows[1])
+            #print('><<<<>><<<><><><<><><><>',rows[0])
+            data_col ={
+                'date':rows[0],
+                'install_count':rows[1]
+            }
+            data_seter.append(data_col)
+
+        data_set_query = {'data_set':data_seter,'total_install':total_install}
+        #print('##############',data_set_query)
+        return data_set_query
+    
+    def os_version_fetch(self):
+        if self.from_date and self.to_date:
+            set_query,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                os_version,count(os_version) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between {0} and {1} 
+                                                                group by os_version,Date order by os_version,Date'''.format(self.from_date,self.to_date))
+        else:
+            set_query,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                os_version,count(os_version) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between '2021-08-31' and '2021-09-07' 
+                                                                group by os_version,Date order by os_version,Date''')
+
+        total_os,all_data =[],[] 
+
+        for det in set_query:
+            total_os.append(det[2])
+            cont ={
+                'date':det[0],
+                'os_version':det[1],
+                'count_os_version':det[2]
+            }
+            all_data.append(cont)
+        setquery ={'all_data':all_data,'total_os':sum(total_os)}
+        return setquery
+    
+    def app_version_fetch(self):
+        if self.from_date and self.to_date:
+            app_version_data = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                app_version,count(app_version) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between {0} and {1} 
+                                                                group by app_version,Date order by app_version,Date'''.format(self.from_date,self.to_date))
+        else:
+            app_version_data = fetch_data_into_pg(postgres_query='''select CAST(CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date))AS DATE) as character(10)) AS Date, app_version,count(app_version)
+                                                                    from user_analysis where CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date))AS DATE) between '2021-08-31' and '2021-09-07' 
+                                                                    group by app_version,Date order by app_version,Date''')
+        datas = app_version_data[0]
+        dat_col,total =[],[]
+        for dat in range(len(datas)):
+            total.append(datas[dat][2])
+            data ={
+                'date':datas[dat][0],
+                'app_version': datas[dat][1],
+                'count_app_version':datas[dat][2],
+            }
+            dat_col.append(data)
+        col_data ={'data':dat_col,'total':sum(total)}
+        #print(col_data)
+        return col_data
+
+    def model_fetch(self):
+        if self.from_date and self.to_date:
+            data_model,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                model_name,count(model_name) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between {0} and {1} 
+                                                                group by model_name,Date order by model_name,Date'''.format(self.from_date,self.to_date))
+
+        else:
+            data_model,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                model_name,count(model_name) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between '2021-08-31' and '2021-09-07' 
+                                                                group by model_name,Date order by model_name,Date''')
+
+        all_model,total_model =[],[]
+        for det in data_model:
+            column ={
+                'date':det[0],
+                'models':det[1],
+                'count_model':det[2]
+            }
+            all_model.append(column)
+            total_model.append(det[2])
+        model_data ={'all_model':all_model,'total_model':sum(total_model)}
+        return model_data
+
+    def ct_source_fetch(self):
+        if self.from_date and self.to_date:
+            ct_data,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                ct_source,count(ct_source) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between {0} and {1} 
+                                                                group by ct_source,Date order by ct_source,Date'''.format(self.from_date,self.to_date))
+
+        else:
+            ct_data,header = fetch_data_into_pg(postgres_query='''select CAST(timezone('Asia/Kolkata', to_timestamp(app_launched_start_date)) AS DATE)  AS Date,
+                                                                ct_source,count(ct_source) from user_analysis 
+                                                                where timezone('Asia/Kolkata', CAST(to_timestamp(app_launched_start_date) AS date))  between '2021-08-31' and '2021-09-07' 
+                                                                group by ct_source,Date order by ct_source,Date''')
+
+        ct_all,total_device =[],[]
+        for det in ct_data:
+            column={
+                'date':det[0],
+                'device':det[1],
+                'count_device':det[2]
+            }
+            ct_all.append(column)
+            total_device.append(det[2])
+
+        col_device ={'device_data':ct_all,'total_device':sum(total_device)}
+        return col_device
 
 
-    
+#COPY user_analysis FROM '/home/rahul/Music/rahul.csv' DELIMITER ',' CSV HEADER;  
