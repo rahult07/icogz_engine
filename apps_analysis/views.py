@@ -531,3 +531,4 @@ class clevertapViewList(APIView):
 
 
 #COPY user_analysis FROM '/home/rahul/Music/rahul.csv' DELIMITER ',' CSV HEADER;  
+#pg_dump -h localhost -U postgres -W -d app_data > latest_dump.sql
